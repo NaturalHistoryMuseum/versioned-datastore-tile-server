@@ -1,0 +1,6 @@
+[run]
+include=maps/*
+
+[report]
+omit=
+    test*
