@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
+import pytest
 
-from maps.utils import clamp, is_power_of_two
+from maps.exceptions import InvalidColour
+from maps.utils import clamp, is_power_of_two, parse_colour
 
 
 def test_clamp():
@@ -27,3 +29,44 @@ def test_is_power_of_two():
     assert is_power_of_two(4)
     assert is_power_of_two(64)
     assert is_power_of_two(1024)
+
+
+def test_parse_colour():
+    # these should all error but should throw the InvalidColour exception
+    should_all_error = [
+        # shouldn't accept more than 4 elements
+        (1, 2, 3, 4, 5, 6),
+        # shouldn't accept less than 3 elements
+        (1, 2),
+        # shouldn't accept an empty string
+        '',
+        # shouldn't accept an invalid string
+        '43f349g3498gbogb8',
+        # shouldn't accept non-number values
+        ['not a number!', 2, 3],
+        # shouldn't accept non-number values in strings either
+        '["not a number!", 2, 3]',
+        # shouldn't accept invalid values
+        '#XX03FF',
+        # shouldn't accept unbalanced brackets
+        '[1, 2, 3]]',
+        # shouldn't accept out of range numbers (below 0)
+        (-1, 2, 3, 4),
+        # shouldn't accept out of range numbers (above 255)
+        (1, 2, 300, 4),
+    ]
+    for error_value in should_all_error:
+        with pytest.raises(InvalidColour):
+            parse_colour(error_value)
+
+    assert parse_colour((1, 2, 3)) == (1, 2, 3)
+    assert parse_colour('(1, 2, 3)') == (1, 2, 3)
+    assert parse_colour([1, 2, 3]) == (1, 2, 3)
+    assert parse_colour((1, 2, 3, 4)) == (1, 2, 3, 4)
+    assert parse_colour([1, 2, 3, 4]) == (1, 2, 3, 4)
+    assert parse_colour('[1,2, 3,4]') == (1, 2, 3, 4)
+    assert parse_colour('#010203') == (1, 2, 3)
+    assert parse_colour('#ffFFff') == (255, 255, 255)
+    # even this dumb formatting works, huzzah!
+    assert parse_colour('[1,2,          3  ,4)') == (1, 2, 3, 4)
+    assert parse_colour((1.1, 2.2, 3.3, 4.4)) == (1, 2, 3, 4)

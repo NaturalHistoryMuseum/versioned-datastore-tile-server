@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
 
+from contextlib import suppress
+
+from maps.exceptions import InvalidColour
+
+
 def clamp(value, minimum, maximum):
     """
     Ensures the passed value is between the minimum and the maximum. If it is below the minimum then
@@ -22,3 +27,39 @@ def is_power_of_two(number):
     :return: True if the number is a power of two and False if not.
     """
     return number != 0 and number & (number - 1) == 0
+
+
+def parse_colour(value):
+    """
+    Parse the given value into a 3 or 4-tuple RGB or RGBA value. Valid parameters:
+
+        - a 3 or 4-tuple/list of ints
+        - a hex string colour
+        - a 3 or 4-tuple/list of ints, as a string (like '(255,255,255)' or '[255,255,255,255]')
+
+    All int values should be in the range 0-255.
+
+    :param value: the value to parse
+    :return: a 3 or 4-tuple of ints
+    """
+    colour = None
+    with suppress(ValueError, IndexError):
+        # if the value is a tuple or a list and its length is 3 or 4 (RGB or RGBA) just return it
+        if isinstance(value, (tuple, list)) and len(value) in (3, 4):
+            colour = tuple(map(int, value))
+        if isinstance(value, str):
+            value = value.strip()
+            # if the string starts with a hash, assume hex colour value and convert to a RGB tuple
+            if value[0] == '#':
+                colour = tuple(int(value[i:i + 2], 16) for i in range(1, 6, 2))
+            # if the string starts and ends with a bracket and has 2 or 3 commas in it, split the
+            # contents by commas and create a tuple of RGB or RGBA values
+            if value[0] in ('(', '[') and value[-1] in (')', ']') and value.count(',') in (2, 3):
+                colour = tuple(map(int, value[1:-1].split(',')))
+
+    # if the colour has been extracted and it's valid, return it
+    if colour is not None and min(colour) >= 0 and max(colour) <= 255:
+        return colour
+
+    # if nothing matches (or an error occurs), chuck an error
+    raise InvalidColour(value)

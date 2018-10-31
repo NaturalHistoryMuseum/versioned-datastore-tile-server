@@ -2,45 +2,13 @@
 
 from flask import Flask, send_file, request, jsonify
 
+from maps.exceptions import InvalidRequestType, MissingIndex
 from maps.query import search
 from maps.tiles import Tile
-from maps.exceptions import InvalidRequestType, InvalidColour, MissingIndex
+from maps.utils import parse_colour
 
 # it's flask time!
 app = Flask(__name__)
-
-
-def parse_colour(value):
-    """
-    Parse the given value into a 3 or 4-tuple RGB or RGBA value. Valid parameters:
-
-        - a 3 or 4-tuple/list of ints
-        - a hex string colour
-        - a 3 or 4-tuple/list of ints, as a string (like '(255,255,255)' or '[255,255,255,255]')
-
-    All int values should be in the range 0-255.
-
-    :param value: the value to parse
-    :return: a 3 or 4-tuple of ints
-    """
-    try:
-        # if the value is a tuple or a list and its length is 3 or 4 (RGB or RGBA) just return it
-        if isinstance(value, (tuple, list)) and len(value) in (3, 4):
-            return tuple(map(int, value))
-        if isinstance(value, str):
-            value = value.strip()
-            # if the string starts with a hash, assume hex colour value and convert to a RGB tuple
-            if value[0] == '#':
-                return tuple(int(value[i:i + 2], 16) for i in range(1, 6, 2))
-            # if the string starts and ends with a bracket and has 2 or 3 commas in it, split the
-            # contents by commas and create a tuple of RGB or RGBA values
-            if value[0] in ('(', '[') and value[-1] in (')', ']') and value.count(',') in (2, 3):
-                return tuple(map(int, value[1:-1].split(',')))
-    except Exception as e:
-        # if anything goes wrong, log a warning and then fall threw to the exception
-        app.logger.warning(f'Failed to parse "{value}" as a colour', e)
-    # if nothing matches (or an error occurs), chuck an error
-    raise InvalidColour(value)
 
 
 def extract_search_params():
