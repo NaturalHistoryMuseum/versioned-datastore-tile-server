@@ -209,7 +209,7 @@ class Tile(object):
         # return the buffer
         return buffer
 
-    def as_grid(self, points_with_count, grid_ratio, point_width):
+    def as_grid(self, points, grid_ratio, point_width):
         """
         Produces a dict of data about the points in this tile according to the UTFGrid specification
         for rasterized interaction data (https://github.com/mapbox/utfgrid-spec).
@@ -228,8 +228,8 @@ class Tile(object):
         For more info on the specifics of implementing the spec and an example, see here:
         https://github.com/mapbox/utfgrid-spec/blob/master/1.3/utfgrid.md.
 
-        :param points_with_count: an iterable of points with the total records at the point. This
-                                  should be in the form (latitude, longitude, total).
+        :param points: an iterable of points with the total records at the point. This
+                       should be in the form (latitude, longitude, total).
         :param grid_ratio: the ratio of the grid to the tile. The recommended default is 0.25 which
                            means the standard 256x256 tile is split up into 4x4 areas. The grid
                            width and height have to be powers of 2
@@ -256,28 +256,36 @@ class Tile(object):
         keys = [""]
         # an empty data dict to start with
         data = {}
+        # the point id is incremented each time we mark a point in the grid. If a point isn't in the
+        # grid then it's not marked. It is important that the ids that appear in the grid are
+        # sequential starting at 1, otherwise they won't work!
+        point_id = 1
 
         # iterate through all the points
-        for point_id, (latitude, longitude, total) in enumerate(points_with_count, start=1):
+        for latitude, longitude, total in points:
             # translate the latitude and longitude coordinate into an x and y coordinate within the
             # tile's bounds
             x, y = self.translate_to_tile(latitude, longitude, resize_factor=grid_ratio)
-            # convert the point id to its character for the interaction map
-            encoded_id = chr(self.encode_id(point_id))
-
-            # we only add the point to keys and data if it is actually in the grid which isn't
-            # guaranteed due to rounding and such, therefore keep track of whether the point is used
-            marked = False
+            # keep track of the grid coordinates we want to mark
+            to_mark = []
             # loop through all the exact characters in the grid to mark
             for x_to_mark, y_to_mark in self.get_points_to_mark(round(x), round(y), point_width):
                 # if the x and y positions to mark are both within the grid, mark them
                 if 0 <= x_to_mark < grid_width and 0 <= y_to_mark < grid_height:
+                    # add the coordinates to mark into the to mark list
+                    to_mark.append((y_to_mark, x_to_mark))
+
+            # if there are grid coordinates to mark
+            if to_mark:
+                # convert the point id to its character for the interaction map
+                encoded_id = chr(self.encode_id(point_id))
+                # increment the id for the next point that needs marking
+                point_id += 1
+                # iterate throguh the mark points
+                for y_to_mark, x_to_mark in to_mark:
                     # mark the position with the encoded point id
                     grid[y_to_mark][x_to_mark] = encoded_id
-                    marked = True
 
-            # only add the keys and data entries if the point appears in the grid
-            if marked:
                 # the point id is used as a string in both the keys list and the data dict so
                 # convert it first
                 string_point_id = str(point_id)
