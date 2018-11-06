@@ -47,7 +47,7 @@ def search(tile, indexes, search_body, points=10000):
     # slice at the end to stop elasticsearch sending us data we don't need
     s = s.index(indexes).using(flask.current_app.client)[0:0]
     # create the geo_bounding_box query, which will filter the data by the tile's bounding box
-    geo_filter = {
+    bounding_box = {
         'meta.geo': {
             # include a small bit of extra wiggle room to ensure we render dots on the edge of tiles
             # correctly (i.e. the actual point should appear in both tiles even when the point
@@ -57,7 +57,7 @@ def search(tile, indexes, search_body, points=10000):
         }
     }
     # apply the bounding box filter
-    s = s.filter('geo_bounding_box', **geo_filter)
+    s = s.filter('geo_bounding_box', **bounding_box)
     # calculate the precision to use in the aggregation
     precision = calculate_precision(tile.z)
     # add the geohash_grid aggregation and the aggregation which will find the first hit
