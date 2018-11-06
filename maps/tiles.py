@@ -182,16 +182,18 @@ class Tile(object):
         # grab the point image we're going to use to render each point in the tile
         point_image = Tile.point_cache.get_point(point_radius, border_width, resize_factor,
                                                  point_colour, border_colour)
+        # figure out the radius of the points we're going to render at the resize factor value
+        scaled_radius = point_radius * resize_factor
 
         # loop through all the point pairs
         for latitude, longitude, _total in points:
             # translate to x and y coordinates within the tile's bounds
             x, y = self.translate_to_tile(latitude, longitude, resize_factor)
             # paste the point image at the x and y coordinates. Note that we can only paste at
-            # integer positions and therefore we round the values up or down and then convert them
-            # to integers. This shouldn't make the points too off their exact location given that
-            # we scale the image after adding all the points
-            image.paste(point_image, (int(round(x - point_radius)), int(round(y - point_radius))),
+            # integer positions and therefore we round the values up or down. This shouldn't make
+            # the points too off their exact location given that we scale the image after adding all
+            # them all
+            image.paste(point_image, (round(x - scaled_radius), round(y - scaled_radius)),
                         mask=point_image)
 
         # if needed, resize the image and use antialiasing to smooth it out
