@@ -4,10 +4,11 @@ import flask
 import geohash
 from elasticsearch_dsl import Search
 
+from maps.tiles import calculate_precision
 from maps.utils import lat_lon_clamp
 
 
-def search(tile, index, search_body, precision, points=5000):
+def search(tile, index, search_body, points=5000):
     """
     Search the given index in elasticsearch to get the points and total records at each point
     within the given tile. The buckets from the aggregation are returned as is and therefore will
@@ -32,8 +33,6 @@ def search(tile, index, search_body, precision, points=5000):
     :param tile: the tile object
     :param index: the index to query
     :param search_body: the elasticsearch query. This should be a dict or None to use the default.
-    :param precision: the precision to use in the geohash grid aggregation. See the elasticsearch
-                      doc for info about the possible values for this parameter and their meaning
     :param points: the number of points to return in the aggregation, i.e. the maximum number of
                    points that will be returned in the buckets list (default: 5000)
     :return: a list of dicts, each containing a "key" with a geohash and a "doc_count" with the
@@ -59,6 +58,8 @@ def search(tile, index, search_body, precision, points=5000):
     # note that from and size are both set to 0 using the slice at the end to save elasticsearch
     # sending us data we don't need
     s = s.index(index).using(flask.current_app.client).filter('geo_bounding_box', **geo_search)[0:0]
+    # calculate the precision to use in the aggregation
+    precision = calculate_precision(tile.z)
     # add the geohash_grid aggregation and the aggregation which will find the first hit
     s.aggs \
         .bucket('grid', 'geohash_grid', field='meta.geo', precision=precision, size=points) \

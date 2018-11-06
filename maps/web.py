@@ -39,8 +39,6 @@ def extract_search_params():
     return dict(
         index=index.strip(),
         search_body=search_body,
-        # TODO: do adaptive precision based on z?
-        precision=int(request.args.get('precision', default=10)),
     )
 
 

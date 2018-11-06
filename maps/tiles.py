@@ -65,6 +65,56 @@ def translate(x, y, z):
     return math.degrees(latitude_radians), longitude_degrees
 
 
+def calculate_precision(zoom):
+    """
+    Calculate the precision to be used in the elasticsearch geo_hash aggregation. See the
+    elasticsearch doc for info about the possible values and their meaning.
+
+    The precision values assigned to each zoom level have been chosen based on a few factors:
+
+        - the estimated sizes of each tile at the given zoom level
+        - the estimated cell dimensions produced by each precision value
+        - how the precision looks when it's actually rendered (mainly whether it looks griddy or
+          not)
+        - what a reasonable number of points in each tile could be (the more points, the lower the
+          precision could be otherwise our geo hash will miss off points due to the size limit)
+
+    Choosing values is fairly subjective and therefore after playing around with the specimens
+    resource its more than a million points, the values in this function were chosen. The basic
+    principle of the values below is that when you're zoomed out and a tile is several hundred
+    kilometres wide, two points a few metres apart will appear as the same point and therefore we
+    can aggregate them without the user noticing. However, when you zoom in these points should be
+    split apart as your tile resolution increases. This is a performance trick to avoid having to
+    render thousands and thousands of points on top of each other at the macro level which would be
+    a waste of time, but still allow us to render exact locations (or at least within a few
+    centimeters) at the micro level.
+
+    :return: a precision value between 1 and 12
+    """
+    return {
+        0: 3,
+        1: 3,
+        2: 4,
+        3: 4,
+        4: 5,
+        5: 5,
+        6: 6,
+        7: 6,
+        8: 7,
+        9: 7,
+        10: 8,
+        11: 9,
+        12: 9,
+        13: 10,
+        14: 10,
+        15: 11,
+        16: 11,
+        17: 11,
+        18: 12,
+        19: 12,
+    }[clamp(zoom, 0, 19)]
+
+
 class PointCache:
     """
     A cache for points! It is much faster to render the different points we want to draw once and
