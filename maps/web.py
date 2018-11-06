@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+import base64
+import gzip
 import json
 
 from elasticsearch import Elasticsearch
@@ -8,7 +10,6 @@ from maps.exceptions import InvalidRequestType, MissingIndex
 from maps.query import search
 from maps.tiles import Tile
 from maps.utils import parse_colour
-
 
 # it's flask time!
 app = Flask(__name__)
@@ -24,20 +25,43 @@ app.client = Elasticsearch(hosts=app.config['ELASTICSEARCH_HOSTS'], sniff_on_sta
 
 def extract_search_params():
     """
-    Extract the search parameters from the request.
+    Extract the search parameters from the request. Currently allowed params:
+
+        - index: contains the indexes to be searched (can be a comma separated list)
+        - search: JSON encoded elasticsearch search dict to restrict the results
+        - query: gzipped, base64, JSON encoded string containing two keys, the "indexes" which
+                 should be a list of the indexes to search (i.e. the same as the index parameter)
+                 and "search" which should contain a dict to pass on to elasticsearch (i.e. the same
+                 as the search parameter)
+
+    An index is required otherwise a MissingIndex exception is raised.
 
     :return: a dict
     """
-    index = request.args.get('index', None)
-    if index is None:
-        raise MissingIndex()
-
+    # the index and search can be passed as individual parameters or as gzipped json, first try the
+    # directly named parameters
+    indexes = request.args.get('indexes', None)
     search_body = request.args.get('search', None)
     if search_body:
         search_body = json.loads(search_body)
 
+    # then try the query body parameter
+    query_body = request.args.get('query', None)
+    if query_body:
+        query_body = json.loads(gzip.decompress(base64.urlsafe_b64decode(query_body)))
+        search_body = query_body['search']
+        indexes = query_body['indexes']
+
+    # an index must be provided in one way or another
+    if indexes is None:
+        raise MissingIndex()
+
+    # if the index is a string then attempt to split it on commas to allow multi-index searching
+    if isinstance(indexes, str):
+        indexes = indexes.split(',')
+
     return dict(
-        index=index.strip(),
+        index=[index.strip() for index in indexes],
         search_body=search_body,
     )
 
