@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import json
 
 from flask import Flask, send_file, request, jsonify
 
@@ -20,8 +21,14 @@ def extract_search_params():
     index = request.args.get('index', None)
     if index is None:
         raise MissingIndex()
+
+    search_body = request.args.get('search', None)
+    if search_body:
+        search_body = json.loads(search_body)
+
     return dict(
         index=index.strip(),
+        search_body=search_body,
         # TODO: do adaptive precision based on z?
         precision=int(request.args.get('precision', default=10)),
     )
@@ -55,7 +62,7 @@ def extract_grid_params():
 
 
 # TODO: store/expose request/response stats somewhere for monitoring?
-@app.route('/tiles/<int:z>/<int:x>/<int:y>.<string:request_type>')
+@app.route('/<int:z>/<int:x>/<int:y>.<string:request_type>')
 def get(x, y, z, request_type):
     """
     Handles tile image and UTFGrid requests.
@@ -75,10 +82,13 @@ def get(x, y, z, request_type):
     # ascending count order
     points = search(tile, **extract_search_params())
     if request_type == 'png':
-        return send_file(tile.as_image(points, **extract_image_params()), mimetype='image/png')
+        response = send_file(tile.as_image(points, **extract_image_params()), mimetype='image/png')
     else:
-        return jsonify(tile.as_grid(points, **extract_grid_params()))
+        response = jsonify(tile.as_grid(points, **extract_grid_params()))
+    # ahhh cors
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    return response
 
 
 if __name__ == "__main__":
-    app.run(port=5000)
+    app.run(host='0.0.0.0', port=5000)

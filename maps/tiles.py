@@ -186,7 +186,7 @@ class Tile(object):
         scaled_radius = point_radius * resize_factor
 
         # loop through all the point pairs
-        for latitude, longitude, _total in points:
+        for latitude, longitude, _total, _first in points:
             # translate to x and y coordinates within the tile's bounds
             x, y = self.translate_to_tile(latitude, longitude, resize_factor)
             # paste the point image at the x and y coordinates. Note that we can only paste at
@@ -228,8 +228,10 @@ class Tile(object):
         For more info on the specifics of implementing the spec and an example, see here:
         https://github.com/mapbox/utfgrid-spec/blob/master/1.3/utfgrid.md.
 
-        :param points: an iterable of points with the total records at the point. This
-                       should be in the form (latitude, longitude, total).
+        :param points: an iterable of points with the total records at the point. This should be in
+                       the form (latitude, longitude, total, first) where latitude and longitude
+                       are obvious, the total is the total number of records at this latitude and
+                       longitude and first is the first record at the point.
         :param grid_ratio: the ratio of the grid to the tile. The recommended default is 0.25 which
                            means the standard 256x256 tile is split up into 4x4 areas. The grid
                            width and height have to be powers of 2
@@ -262,7 +264,7 @@ class Tile(object):
         point_id = 1
 
         # iterate through all the points
-        for latitude, longitude, total in points:
+        for latitude, longitude, total, first in points:
             # translate the latitude and longitude coordinate into an x and y coordinate within the
             # tile's bounds
             x, y = self.translate_to_tile(latitude, longitude, resize_factor=grid_ratio)
@@ -291,10 +293,28 @@ class Tile(object):
                 string_point_id = str(point_id)
                 # add it to the keys list
                 keys.append(string_point_id)
+
+                if total == 1:
+                    # extract the actual record coordinates
+                    report_latitude, report_longitude = map(float, first['meta']['geo'].split(','))
+                else:
+                    # otherwise use the group coordinates
+                    report_latitude, report_longitude = latitude, longitude
+
                 # add the data for the point
                 data[string_point_id] = {
-                    # TODO: tile? Is that useful here? Needed by ckanext-maps maybe?
-                    '_tiledmap_count': f'total: {total}, tile: {self.z}/{self.x}/{self.y}'
+                    'count': total,
+                    'data': first['data'],
+                    'record_latitude': report_latitude,
+                    'record_longitude': report_longitude,
+                    'bounding_box': {
+                        "type": "Point",
+                        # note the reversal of these points cause this is GeoJSON
+                        "coordinates": [report_longitude, report_latitude],
+                        # use a tight distance to ensure we only get these points in any future
+                        # searches
+                        "distance": "1m"
+                    }
                 }
 
         # return the data we've produced
