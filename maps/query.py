@@ -52,8 +52,8 @@ def search(tile, indexes, search_body, points=15000):
             # include a small bit of extra wiggle room to ensure we render dots on the edge of tiles
             # correctly (i.e. the actual point should appear in both tiles even when the point
             # itself only reside in one)
-            'top_left': '{}, {}'.format(*lat_lon_clamp(tile.top_left(extra=0.1))),
-            'bottom_right': '{}, {}'.format(*lat_lon_clamp(tile.bottom_right(extra=0.1))),
+            'top_left': '{}, {}'.format(*lat_lon_clamp(tile.top_left(extra=0.01))),
+            'bottom_right': '{}, {}'.format(*lat_lon_clamp(tile.bottom_right(extra=0.01))),
         }
     }
     # apply the bounding box filter
