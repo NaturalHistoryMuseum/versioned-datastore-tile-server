@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import json
 
+from elasticsearch import Elasticsearch
 from flask import Flask, send_file, request, jsonify
 
 from maps.exceptions import InvalidRequestType, MissingIndex
@@ -8,8 +9,17 @@ from maps.query import search
 from maps.tiles import Tile
 from maps.utils import parse_colour
 
+
 # it's flask time!
 app = Flask(__name__)
+# load the default config settings
+app.config.from_object('maps.config')
+# load any settings from the config file pointed at by the maps_config environment variable
+app.config.from_envvar('maps_config')
+
+app.client = Elasticsearch(hosts=app.config['ELASTICSEARCH_HOSTS'], sniff_on_start=True,
+                           sniff_on_connection_fail=True, sniffer_timeout=60, sniff_timeout=10,
+                           http_compress=False)
 
 
 def extract_search_params():

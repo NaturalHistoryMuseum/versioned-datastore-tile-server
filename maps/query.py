@@ -1,14 +1,10 @@
 #!/usr/bin/env python3
 
+import flask
 import geohash
-from elasticsearch import Elasticsearch
 from elasticsearch_dsl import Search
 
 from maps.utils import lat_lon_clamp
-
-client = Elasticsearch(hosts=[u'http://172.17.0.2:9200'], sniff_on_start=True,
-                       sniff_on_connection_fail=True, sniffer_timeout=60, sniff_timeout=10,
-                       http_compress=False)
 
 
 def search(tile, index, search_body, precision, points=5000):
@@ -62,7 +58,7 @@ def search(tile, index, search_body, precision, points=5000):
     # apply the bounding box filter as well as setting the index and the client to be used. Also
     # note that from and size are both set to 0 using the slice at the end to save elasticsearch
     # sending us data we don't need
-    s = s.index(index).using(client).filter('geo_bounding_box', **geo_search)[0:0]
+    s = s.index(index).using(flask.current_app.client).filter('geo_bounding_box', **geo_search)[0:0]
     # add the geohash_grid aggregation and the aggregation which will find the first hit
     s.aggs \
         .bucket('grid', 'geohash_grid', field='meta.geo', precision=precision, size=points) \

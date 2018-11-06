@@ -4,3 +4,4 @@ htmlcov
 *.pyc
 .idea
 .coverage
+maps.cfg
