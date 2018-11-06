@@ -2,7 +2,7 @@
 import pytest
 
 from maps.exceptions import InvalidColour
-from maps.utils import clamp, is_power_of_two, parse_colour
+from maps.utils import clamp, is_power_of_two, parse_colour, lat_lon_clamp
 
 
 def test_clamp():
@@ -70,3 +70,13 @@ def test_parse_colour():
     # even this dumb formatting works, huzzah!
     assert parse_colour('[1,2,          3  ,4)') == (1, 2, 3, 4)
     assert parse_colour((1.1, 2.2, 3.3, 4.4)) == (1, 2, 3, 4)
+
+
+def test_lat_lon_clamp():
+    assert lat_lon_clamp((0, 0)) == (0, 0)
+    assert lat_lon_clamp((-90, 90)) == (-85.0511, 90)
+    assert lat_lon_clamp((90, 90)) == (85.0511, 90)
+    assert lat_lon_clamp((10, 499)) == (10, 180)
+    assert lat_lon_clamp((10, -499)) == (10, -180)
+    assert lat_lon_clamp((-90, -499)) == (-85.0511, -180)
+    assert lat_lon_clamp((90, 499)) == (85.0511, 180)

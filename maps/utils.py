@@ -19,6 +19,16 @@ def clamp(value, minimum, maximum):
     return max(minimum, min(value, maximum))
 
 
+def lat_lon_clamp(pair):
+    """
+    Clamp a pair of numbers to latitude and longitude min/max.
+
+    :param pair: a pair of numbers representing a latitude and a longitude
+    :return: a pair of numbers, guaranteed to be valid
+    """
+    return clamp(pair[0], -85.0511, 85.0511), clamp(pair[1], -180, 180)
+
+
 def is_power_of_two(number):
     """
     Returns True if the number is a power of two and False if not.
