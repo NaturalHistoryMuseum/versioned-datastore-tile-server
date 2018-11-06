@@ -61,7 +61,7 @@ def extract_search_params():
         indexes = indexes.split(',')
 
     return dict(
-        index=[index.strip() for index in indexes],
+        indexes=[index.strip() for index in indexes],
         search_body=search_body,
     )
 
