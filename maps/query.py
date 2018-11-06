@@ -8,7 +8,7 @@ from maps.tiles import calculate_precision
 from maps.utils import lat_lon_clamp
 
 
-def search(tile, index, search_body, points=5000):
+def search(tile, indexes, search_body, points=10000):
     """
     Search the given index in elasticsearch to get the points and total records at each point
     within the given tile. The buckets from the aggregation are returned as is and therefore will
@@ -31,10 +31,10 @@ def search(tile, index, search_body, points=5000):
         ]
 
     :param tile: the tile object
-    :param index: the index to query
+    :param indexes: the indexes to query
     :param search_body: the elasticsearch query. This should be a dict or None to use the default.
     :param points: the number of points to return in the aggregation, i.e. the maximum number of
-                   points that will be returned in the buckets list (default: 5000)
+                   points that will be returned in the buckets list (default: 10000)
     :return: a list of dicts, each containing a "key" with a geohash and a "doc_count" with the
              total records at that geohash
     """
@@ -43,9 +43,11 @@ def search(tile, index, search_body, points=5000):
         s = Search.from_dict(search_body)
     else:
         s = Search()
-
+    # set the indexes and the client to be used as well as setting the from and size to 0 using the
+    # slice at the end to stop elasticsearch sending us data we don't need
+    s = s.index(indexes).using(flask.current_app.client)[0:0]
     # create the geo_bounding_box query, which will filter the data by the tile's bounding box
-    geo_search = {
+    geo_filter = {
         'meta.geo': {
             # include a small bit of extra wiggle room to ensure we render dots on the edge of tiles
             # correctly (i.e. the actual point should appear in both tiles even when the point
@@ -54,10 +56,8 @@ def search(tile, index, search_body, points=5000):
             'bottom_right': '{}, {}'.format(*lat_lon_clamp(tile.bottom_right(extra=0.1))),
         }
     }
-    # apply the bounding box filter as well as setting the index and the client to be used. Also
-    # note that from and size are both set to 0 using the slice at the end to save elasticsearch
-    # sending us data we don't need
-    s = s.index(index).using(flask.current_app.client).filter('geo_bounding_box', **geo_search)[0:0]
+    # apply the bounding box filter
+    s = s.filter('geo_bounding_box', **geo_filter)
     # calculate the precision to use in the aggregation
     precision = calculate_precision(tile.z)
     # add the geohash_grid aggregation and the aggregation which will find the first hit
