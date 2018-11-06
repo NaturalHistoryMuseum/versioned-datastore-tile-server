@@ -67,6 +67,9 @@ def test_parse_colour():
     assert parse_colour('[1,2, 3,4]') == (1, 2, 3, 4)
     assert parse_colour('#010203') == (1, 2, 3)
     assert parse_colour('#ffFFff') == (255, 255, 255)
+    assert parse_colour('#000') == (0, 0, 0)
+    assert parse_colour('#F0A') == (255, 0, 170)
+    assert parse_colour('#B47') == parse_colour('#BB4477')
     # even this dumb formatting works, huzzah!
     assert parse_colour('[1,2,          3  ,4)') == (1, 2, 3, 4)
     assert parse_colour((1.1, 2.2, 3.3, 4.4)) == (1, 2, 3, 4)

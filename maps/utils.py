@@ -61,7 +61,13 @@ def parse_colour(value):
             value = value.strip()
             # if the string starts with a hash, assume hex colour value and convert to a RGB tuple
             if value[0] == '#':
-                colour = tuple(int(value[i:i + 2], 16) for i in range(1, 6, 2))
+                # this catches the short form #F0F where each colour is represented by a single
+                # letter/number and should be duplicated (i.e. this #F0A is #FF00AA)
+                if len(value) == 4:
+                    colour = tuple(int(value[i:i + 1]*2, 16) for i in range(1, 4))
+                # this catches the long form where each colour is represented by two letters/numbers
+                elif len(value) == 7:
+                    colour = tuple(int(value[i:i + 2], 16) for i in range(1, 6, 2))
             # if the string starts and ends with a bracket and has 2 or 3 commas in it, split the
             # contents by commas and create a tuple of RGB or RGBA values
             if value[0] in ('(', '[') and value[-1] in (')', ']') and value.count(',') in (2, 3):
