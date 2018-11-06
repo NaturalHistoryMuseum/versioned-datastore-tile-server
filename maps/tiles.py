@@ -313,37 +313,49 @@ class Tile(object):
         """
         return translate(self.x + 0.5, self.y + 0.5, self.z)
 
-    def bottom_left(self):
+    def bottom_left(self, extra=0):
         """
         Returns the latitude and longitude of the bottom left of the tile.
 
+        :param extra: an extra value to account into the x,y position before translation to latitude
+                      and longitude. This is useful if slightly more context around the tile is
+                      required. Defaults to 0.
         :return: returns a tuple containing the latitude and longitude
         """
-        return translate(self.x, self.y + 1, self.z)
+        return translate(self.x - extra, self.y + 1 + extra, self.z)
 
-    def bottom_right(self):
+    def bottom_right(self, extra=0):
         """
         Returns the latitude and longitude of the bottom right of the tile.
 
+        :param extra: an extra value to account into the x,y position before translation to latitude
+                      and longitude. This is useful if slightly more context around the tile is
+                      required. Defaults to 0.
         :return: returns a tuple containing the latitude and longitude
         """
-        return translate(self.x + 1, self.y + 1, self.z)
+        return translate(self.x + 1 + extra, self.y + 1 + extra, self.z)
 
-    def top_left(self):
+    def top_left(self, extra=0):
         """
         Returns the latitude and longitude of the top left of the tile.
 
+        :param extra: an extra value to account into the x,y position before translation to latitude
+                      and longitude. This is useful if slightly more context around the tile is
+                      required. Defaults to 0.
         :return: returns a tuple containing the latitude and longitude
         """
-        return translate(self.x, self.y, self.z)
+        return translate(self.x - extra, self.y - extra, self.z)
 
-    def top_right(self):
+    def top_right(self, extra=0):
         """
         Returns the latitude and longitude of the top right of the tile.
 
+        :param extra: an extra value to account into the x,y position before translation to latitude
+                      and longitude. This is useful if slightly more context around the tile is
+                      required. Defaults to 0.
         :return: returns a tuple containing the latitude and longitude
         """
-        return translate(self.x + 1, self.y, self.z)
+        return translate(self.x + 1 + extra, self.y - extra, self.z)
 
     def longitude_to_tile_x(self, longitude, resize_factor):
         """
