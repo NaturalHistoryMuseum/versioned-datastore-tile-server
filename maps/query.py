@@ -8,7 +8,7 @@ from maps.tiles import calculate_precision
 from maps.utils import lat_lon_clamp
 
 
-def search(tile, indexes, search_body, points=10000):
+def search(tile, indexes, search_body, points=15000):
     """
     Search the given index in elasticsearch to get the points and total records at each point
     within the given tile. The buckets from the aggregation are returned as is and therefore will
@@ -34,7 +34,7 @@ def search(tile, indexes, search_body, points=10000):
     :param indexes: the indexes to query
     :param search_body: the elasticsearch query. This should be a dict or None to use the default.
     :param points: the number of points to return in the aggregation, i.e. the maximum number of
-                   points that will be returned in the buckets list (default: 10000)
+                   points that will be returned in the buckets list (default: 15000)
     :return: a list of dicts, each containing a "key" with a geohash and a "doc_count" with the
              total records at that geohash
     """
