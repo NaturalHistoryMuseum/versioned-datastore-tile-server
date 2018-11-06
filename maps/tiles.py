@@ -307,7 +307,12 @@ class Tile(object):
                     'data': first['data'],
                     'record_latitude': report_latitude,
                     'record_longitude': report_longitude,
-                    'bounding_box': {
+                    # return a filter value that if it was used as part of a further geo query
+                    # filter (i.e. __geo__) it would be understood by the versioned datastore
+                    # backend and would restrict any results to the point(s) at this lat/long pair
+                    'geo_filter': {
+                        # we'll use a point for this as it'll be more accurate than calculating a
+                        # estimating a bounding box size and passing a Polygon
                         "type": "Point",
                         # note the reversal of these points cause this is GeoJSON
                         "coordinates": [report_longitude, report_latitude],
