@@ -24,7 +24,7 @@ app = Flask(__name__)
 # load the default config settings
 app.config.from_object('maps.config')
 # load any settings from the config file pointed at by the maps_config environment variable
-app.config.from_envvar('maps_config')
+app.config.from_envvar('maps_config', silent=True)
 
 
 @postfork
