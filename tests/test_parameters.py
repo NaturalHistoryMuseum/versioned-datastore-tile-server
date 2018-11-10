@@ -9,7 +9,8 @@ from colour import Color
 
 from maps.exceptions import InvalidColour, MissingIndex
 from maps.parameters import parse_colour, extract, parse_query_body, extract_search_params, \
-    extract_plot_parameters, extract_plot_utf_grid_params
+    extract_plot_parameters, extract_plot_utf_grid_params, extract_gridded_utf_grid_params, \
+    extract_gridded_parameters
 
 
 def compress_query(query):
@@ -147,3 +148,70 @@ def test_extract_plot_utf_grid_params_all(monkeypatch):
     params = extract_plot_utf_grid_params()
     assert params['grid_resolution'] == 5
     assert params['point_width'] == 4
+
+
+def test_extract_plot_utf_grid_params_none(monkeypatch):
+    args = {}
+    monkeypatch.setattr('maps.parameters.request', MagicMock(args=args))
+
+    params = extract_plot_utf_grid_params()
+    for name in {'grid_resolution', 'point_width'}:
+        # check that each of the expected names is in the params dict
+        assert name in params
+
+
+def test_extract_gridded_parameters_all(monkeypatch):
+    args = {
+        # use 10.4 to ensure it's converted to an int
+        'grid_resolution': 10.4,
+        # use a 3 digit hex code to test that part
+        'cold_colour': '#fff',
+        # use a 6 digit hex code to test that part
+        'hot_colour': '#000000',
+        # use 13.2 to ensure it's converted to an int
+        'range_size': 13.2,
+        # use 2.1 to ensure it's converted to an int
+        'resize_factor': 2.1,
+    }
+    monkeypatch.setattr('maps.parameters.request', MagicMock(args=args))
+
+    params = extract_gridded_parameters()
+    assert params['grid_resolution'] == 10
+    assert params['cold_colour'] == Color('white')
+    assert params['hot_colour'] == Color('black')
+    assert params['range_size'] == 13
+    assert params['resize_factor'] == 2
+
+
+def test_extract_gridded_parameters_none(monkeypatch):
+    args = {}
+    monkeypatch.setattr('maps.parameters.request', MagicMock(args=args))
+
+    params = extract_gridded_parameters()
+    for name in {'grid_resolution', 'cold_colour', 'hot_colour', 'range_size', 'resize_factor'}:
+        # check that each of the expected names is in the params dict
+        assert name in params
+
+
+def test_extract_gridded_utf_grid_params_all(monkeypatch):
+    args = {
+        # use 5.2 to ensure it's converted to an int
+        'grid_resolution': 5.2,
+        # use 4.6 to ensure it's converted to an int
+        'point_width': 4.6,
+    }
+    monkeypatch.setattr('maps.parameters.request', MagicMock(args=args))
+
+    params = extract_gridded_utf_grid_params()
+    assert params['grid_resolution'] == 5
+    assert params['point_width'] == 4
+
+
+def test_extract_gridded_utf_grid_params_none(monkeypatch):
+    args = {}
+    monkeypatch.setattr('maps.parameters.request', MagicMock(args=args))
+
+    params = extract_gridded_utf_grid_params()
+    for name in {'grid_resolution', 'point_width'}:
+        # check that each of the expected names is in the params dict
+        assert name in params
