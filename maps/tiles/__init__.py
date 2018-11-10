@@ -196,7 +196,7 @@ class Tile(metaclass=abc.ABCMeta):
         zoom = 2 ** self.z
         return (1 - math.log(math.tan(radians) + 1 / math.cos(radians)) / math.pi) / 2 * zoom
 
-    def translate(self, x_extra=0, y_extra=0):
+    def translate(self, x_extra=0.0, y_extra=0.0):
         """
         Translates the tile's x, y, z values into a latitude and longitude coordinate pair, pointing
         to the top left corner of the tile. The x_extra and y_extra parameters allow offsets to be
@@ -222,7 +222,7 @@ class Tile(metaclass=abc.ABCMeta):
         """
         return self.translate(0.5, 0.5)
 
-    def bottom_left(self, extra=0):
+    def bottom_left(self, extra=0.0):
         """
         Returns the latitude and longitude of the bottom left of the tile.
 
@@ -233,7 +233,7 @@ class Tile(metaclass=abc.ABCMeta):
         """
         return self.translate(-extra, 1 + extra)
 
-    def bottom_right(self, extra=0):
+    def bottom_right(self, extra=0.0):
         """
         Returns the latitude and longitude of the bottom right of the tile.
 
@@ -244,7 +244,7 @@ class Tile(metaclass=abc.ABCMeta):
         """
         return self.translate(1 + extra, 1 + extra)
 
-    def top_left(self, extra=0):
+    def top_left(self, extra=0.0):
         """
         Returns the latitude and longitude of the top left of the tile.
 
@@ -255,7 +255,7 @@ class Tile(metaclass=abc.ABCMeta):
         """
         return self.translate(-extra, -extra)
 
-    def top_right(self, extra=0):
+    def top_right(self, extra=0.0):
         """
         Returns the latitude and longitude of the top right of the tile.
 
