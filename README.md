@@ -73,7 +73,7 @@ The defaults are hard coded and are intended to be modified at the request level
 ##### Request query string options
 | Name | Description | Default |
 |------|-------------|---------|
-| `indexes` | The Elasticsearch indexes that should be searched to produce the points in the rendered tile | n/a |
+| `indexes` | The Elasticsearch indexes that should be searched to produce the points in the rendered tile | |
 | `search` | The Elasticsearch query that should be used to limit the data. This shouldn't include the tile limiting geo-query, but simply any other query that should be used in combination with the queries and filters added by the server. This should be a stringified JSON object| |
 | `query` | A gzipped, base64 encoded, JSON string containing the indexes (key: `indexes`) to search and the search too perform (key: `search`) | |
 | `style` | The style of map tile to render, must be either `plot`, `gridded` or `heatmap` | `plot` |
