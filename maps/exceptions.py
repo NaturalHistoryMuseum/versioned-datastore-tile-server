@@ -5,14 +5,13 @@ from werkzeug.exceptions import HTTPException
 
 class GridNotPowerOfTwoException(HTTPException):
     """
-    Exception used to indicate that the grid width and height in use are invalid.
+    Exception used to indicate that the grid width in use is invalid.
     """
 
     code = 400
 
-    def __init__(self, grid_width, grid_height):
-        super().__init__(f'Grid width ({grid_width}) and height ({grid_height}) must both be '
-                         f'powers of two')
+    def __init__(self, grid_width):
+        super().__init__(f'Grid size ({grid_width}) must a be power of two')
 
 
 class InvalidRequestType(HTTPException):
@@ -33,18 +32,8 @@ class InvalidColour(HTTPException):
 
     code = 400
 
-    def __init__(self, colour):
-        super().__init__()
-        self.colour = colour
-
-    def get_description(self, environ=None):
-        return (f"{self.colour} was not in a recognised format and could not be parsed as a "
-                f"colour. Valid formats: </br><ul>"
-                f"<li>a hex colour string starting with a hash, like: '#ff00ff'</li>"
-                f"<li>a sequence of values between 0 and 255 representing RGB and A if "
-                f"needed. The values should be comma seperated and enclosed in circular "
-                f"or square brackets, for example '(255, 0, 255)' or '[255, 0, 255, 190]'"
-                f"</li></ul>")
+    def __init__(self, error):
+        super().__init__(str(error))
 
 
 class MissingIndex(HTTPException):
@@ -56,3 +45,14 @@ class MissingIndex(HTTPException):
 
     def __init__(self):
         super().__init__('An index must be specified')
+
+
+class InvalidStyle(HTTPException):
+    """
+    Exception used to indicate that the style was invalid.
+    """
+
+    code = 400
+
+    def __init__(self, style):
+        super().__init__(f'{style} is not a valid style, must be plot, gridded or heatmap')

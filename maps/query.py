@@ -4,7 +4,6 @@ import flask
 import geohash
 from elasticsearch_dsl import Search
 
-from maps.tiles import calculate_precision
 from maps.utils import lat_lon_clamp
 
 
@@ -59,7 +58,7 @@ def search(tile, indexes, search_body, points=15000):
     # apply the bounding box filter
     s = s.filter('geo_bounding_box', **bounding_box)
     # calculate the precision to use in the aggregation
-    precision = calculate_precision(tile.z)
+    precision = tile.calculate_precision()
     # add the geohash_grid aggregation and the aggregation which will find the first hit
     s.aggs \
         .bucket('grid', 'geohash_grid', field='meta.geo', precision=precision, size=points) \

@@ -1,15 +1,23 @@
 #!/usr/bin/env python3
-import base64
-import gzip
-import json
 
 from elasticsearch import Elasticsearch
 from flask import Flask, send_file, request, jsonify
 
-from maps.exceptions import InvalidRequestType, MissingIndex
+from maps import parameters
+from maps.exceptions import InvalidRequestType, InvalidStyle
 from maps.query import search
-from maps.tiles import Tile
-from maps.utils import parse_colour
+from maps.tiles.gridded import GriddedTile
+from maps.tiles.heatmap import HeatmapTile
+from maps.tiles.plot import PlotTile
+
+try:
+    # attempt to import the uwsgi postfork decorator. If it fails, not a problem, we're just not
+    # running in a uwsgi environment (https://uwsgi-docs.readthedocs.io/en/latest/PythonModule.html)
+    from uwsgidecorators import postfork
+except ImportError:
+    # just replace postfork with a noop decorator function
+    def postfork(f):
+        return f
 
 # it's flask time!
 app = Flask(__name__)
@@ -18,84 +26,48 @@ app.config.from_object('maps.config')
 # load any settings from the config file pointed at by the maps_config environment variable
 app.config.from_envvar('maps_config')
 
-app.client = Elasticsearch(hosts=app.config['ELASTICSEARCH_HOSTS'], sniff_on_start=True,
-                           sniff_on_connection_fail=True, sniffer_timeout=60, sniff_timeout=10,
-                           http_compress=False)
 
-
-def extract_search_params():
+@postfork
+def init_elasticsearch():
     """
-    Extract the search parameters from the request. Currently allowed params:
+    This function instantiates an elasticsearch client for use. It is set on the app in the "client"
+    property.
 
-        - index: contains the indexes to be searched (can be a comma separated list)
-        - search: JSON encoded elasticsearch search dict to restrict the results
-        - query: gzipped, base64, JSON encoded string containing two keys, the "indexes" which
-                 should be a list of the indexes to search (i.e. the same as the index parameter)
-                 and "search" which should contain a dict to pass on to elasticsearch (i.e. the same
-                 as the search parameter)
-
-    An index is required otherwise a MissingIndex exception is raised.
-
-    :return: a dict
+    This function is also decorated with @postfork so that if running under uswgi in prefork mode
+    (the uwsgi default) this function is called after the fork has taken place (shocker) allowing us
+    to reinstantiate the elasticsearch client because it can't handle the forking - it produces all
+    kinds of weird errors during concurrent multiprocess use if you don't do this.
     """
-    # the index and search can be passed as individual parameters or as gzipped json, first try the
-    # directly named parameters
-    indexes = request.args.get('indexes', None)
-    search_body = request.args.get('search', None)
-    if search_body:
-        search_body = json.loads(search_body)
-
-    # then try the query body parameter
-    query_body = request.args.get('query', None)
-    if query_body:
-        query_body = json.loads(gzip.decompress(base64.urlsafe_b64decode(query_body)))
-        search_body = query_body['search']
-        indexes = query_body['indexes']
-
-    # an index must be provided in one way or another
-    if indexes is None:
-        raise MissingIndex()
-
-    # if the index is a string then attempt to split it on commas to allow multi-index searching
-    if isinstance(indexes, str):
-        indexes = indexes.split(',')
-
-    return dict(
-        indexes=[index.strip() for index in indexes],
-        search_body=search_body,
-    )
+    app.client = Elasticsearch(hosts=app.config['ELASTICSEARCH_HOSTS'], sniff_on_start=True,
+                               sniff_on_connection_fail=True, sniffer_timeout=60, sniff_timeout=10,
+                               http_compress=False)
 
 
-def extract_image_params():
-    """
-    Extract the image parameters from the request.
+# create an elasticsearch client for us to use
+init_elasticsearch()
 
-    :return: a dict
-    """
-    return dict(
-        point_radius=int(request.args.get('point_radius', default=4)),
-        border_width=int(request.args.get('border_width', default=1)),
-        resize_factor=int(request.args.get('resize_factor', default=4)),
-        point_colour=parse_colour(request.args.get('point_colour', default=(238, 0, 0))),
-        border_colour=parse_colour(request.args.get('border_colour', default=(255, 255, 255))),
-    )
-
-
-def extract_grid_params():
-    """
-    Extract the grid parameters from the request.
-
-    :return: a dict
-    """
-    return dict(
-        grid_ratio=float(request.args.get('grid_ratio', default=0.25)),
-        point_width=int(request.args.get('point_width', default=5)),
-    )
+# map the various tile styles to their implementation classes
+tile_styles = {tile_class.style: tile_class for tile_class in (PlotTile, GriddedTile, HeatmapTile)}
+tile_parameters = {
+    PlotTile.style: {
+        'png': parameters.extract_plot_parameters,
+        'grid.json': parameters.extract_plot_utf_grid_params,
+    },
+    GriddedTile.style: {
+        'png': parameters.extract_gridded_parameters,
+        'grid.json': parameters.extract_gridded_utf_grid_params,
+    },
+    HeatmapTile.style: {
+        'png': parameters.extract_heatmap_parameters,
+        # no UTFGrid for heatmaps
+        'grid.json': None,
+    }
+}
 
 
 # TODO: store/expose request/response stats somewhere for monitoring?
 @app.route('/<int:z>/<int:x>/<int:y>.<string:request_type>')
-def get(x, y, z, request_type):
+def render_tile(x, y, z, request_type):
     """
     Handles tile image and UTFGrid requests.
 
@@ -108,19 +80,30 @@ def get(x, y, z, request_type):
     if request_type != 'png' and request_type != 'grid.json':
         raise InvalidRequestType(request_type)
 
-    tile = Tile(x, y, z)
+    # get the requested style, default to plot if it's missing
+    style = request.args.get('style', PlotTile.style)
+    if style not in tile_styles:
+        raise InvalidStyle(style)
 
-    # query elasticsearch, this will return a list of buckets containing locations and counts in
-    # ascending count order
-    points = search(tile, **extract_search_params())
+    tile = tile_styles[style](x, y, z)
+
+    # query elasticsearch, this will return a list of buckets containing locations and counts
+    points = search(tile, **parameters.extract_search_params())
+
+    # extract the parameters for the tile style and request type combination
+    params = tile_parameters[style][request_type]()
+
+    # create the appropriate response, either png or grid.json
     if request_type == 'png':
-        response = send_file(tile.as_image(points, **extract_image_params()), mimetype='image/png')
+        response = send_file(tile.as_image(points, **params), mimetype='image/png')
     else:
-        response = jsonify(tile.as_grid(points, **extract_grid_params()))
+        response = jsonify(tile.as_grid(points, **params))
+
     # ahhh cors
     response.headers['Access-Control-Allow-Origin'] = '*'
     return response
 
 
+# for dev use only
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5000)

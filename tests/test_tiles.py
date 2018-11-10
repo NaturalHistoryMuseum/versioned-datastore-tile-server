@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 
+from unittest.mock import MagicMock
+
 from pytest import approx
 
-from maps.tiles import longitude_to_x, latitude_to_y, translate
+from maps.tiles import Tile
 
 
 def test_longitude_to_x():
@@ -25,27 +27,32 @@ def test_longitude_to_x():
         (540, 2, 0),
     ]
     for longitude, zoom, expected_x in checks:
-        assert expected_x == longitude_to_x(longitude, zoom)
+        tile = Tile(MagicMock(), MagicMock(), zoom)
+        assert expected_x == tile.longitude_to_x(longitude)
 
 
 def test_latitude_to_y():
-    assert 0.5 == latitude_to_y(0, 0)
-    assert 2 == latitude_to_y(0, 2)
+    tile_z_0 = Tile(MagicMock(), MagicMock(), 0)
+    tile_z_2 = Tile(MagicMock(), MagicMock(), 2)
+    tile_z_4 = Tile(MagicMock(), MagicMock(), 4)
+
+    assert 0.5 == tile_z_0.latitude_to_y(0)
+    assert 2 == tile_z_2.latitude_to_y(0)
     # 85.0511 is the limit at which web mercator operates so the value should be really close to 0
     # but not quite 0
-    assert 0 < latitude_to_y(85.0511, 0) < 0.001
+    assert 0 < tile_z_0.latitude_to_y(85.0511) < 0.001
     # -85.0511 is the limit at which web mercator operates so the value should be really close to 1
     # but not quite 1
-    assert 0.999 < latitude_to_y(-85.0511, 0) < 1
+    assert 0.999 < tile_z_0.latitude_to_y(-85.0511) < 1
     # values beyond -85.0511 or 85.0511 should be clamped
-    assert latitude_to_y(-85.0511, 0) == latitude_to_y(-90, 0)
-    assert latitude_to_y(-85.0511, 4) == latitude_to_y(-95, 4)
-    assert latitude_to_y(85.0511, 0) == latitude_to_y(90, 0)
-    assert latitude_to_y(85.0511, 4) == latitude_to_y(95, 4)
+    assert tile_z_0.latitude_to_y(-85.0511) == tile_z_0.latitude_to_y(-90)
+    assert tile_z_4.latitude_to_y(-85.0511) == tile_z_4.latitude_to_y(-95)
+    assert tile_z_0.latitude_to_y(85.0511) == tile_z_0.latitude_to_y(90)
+    assert tile_z_4.latitude_to_y(85.0511) == tile_z_4.latitude_to_y(95)
 
 
 def test_translate():
-    assert translate(0, 0, 0) == (approx(85.0511), -180)
-    assert translate(0, 0, 4) == (approx(85.0511), -180)
-    assert translate(1, 1, 1) == (0, 0)
-    assert translate(2, 2, 2) == (0, 0)
+    assert Tile(0, 0, 0).translate() == (approx(85.0511), -180)
+    assert Tile(0, 0, 4).translate() == (approx(85.0511), -180)
+    assert Tile(1, 1, 1).translate() == (0, 0)
+    assert Tile(2, 2, 2).translate() == (0, 0)
