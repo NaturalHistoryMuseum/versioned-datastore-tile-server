@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
+import base64
+import gzip
+import json
 from unittest.mock import MagicMock
 
 import pytest
 from colour import Color
 
 from maps.exceptions import InvalidColour
-from maps.parameters import parse_colour, extract
+from maps.parameters import parse_colour, extract, parse_query_body
 
 
 class TestExtract:
@@ -29,6 +32,12 @@ class TestExtract:
         args = {'test': 5.4}
         monkeypatch.setattr('maps.parameters.request', MagicMock(args=args))
         assert extract('not_test', default=6.1, parser=int) == 6.1
+
+
+def test_parse_query_body():
+    query = {'test': 5.4}
+    data = base64.urlsafe_b64encode(gzip.compress(json.dumps(query).encode('utf-8')))
+    assert parse_query_body(data) == query
 
 
 def test_parse_colour():
