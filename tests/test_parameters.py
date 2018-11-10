@@ -8,7 +8,8 @@ import pytest
 from colour import Color
 
 from maps.exceptions import InvalidColour, MissingIndex
-from maps.parameters import parse_colour, extract, parse_query_body, extract_search_params
+from maps.parameters import parse_colour, extract, parse_query_body, extract_search_params, \
+    extract_plot_parameters, extract_plot_utf_grid_params
 
 
 def compress_query(query):
@@ -99,3 +100,50 @@ class TestExtractSearchParams:
         params = extract_search_params()
         assert params['indexes'] == ['index1', 'index3', 'index100']
         assert params['search_body'] == {'search': 'something'}
+
+
+def test_extract_plot_parameters_all(monkeypatch):
+    args = {
+        # use 10.4 to ensure it's converted to an int
+        'point_radius': 10.4,
+        # use a 3 digit hex code to test that part
+        'point_colour': '#fff',
+        # use 3.2 to ensure it's converted to an int
+        'border_width': 3.2,
+        # use a 6 digit hex code to test that part
+        'border_colour': '#000000',
+        # use 2.1 to ensure it's converted to an int
+        'resize_factor': 2.1,
+    }
+    monkeypatch.setattr('maps.parameters.request', MagicMock(args=args))
+
+    params = extract_plot_parameters()
+    assert params['point_radius'] == 10
+    assert params['point_colour'] == Color('white')
+    assert params['border_width'] == 3
+    assert params['border_colour'] == Color('black')
+    assert params['resize_factor'] == 2
+
+
+def test_extract_plot_parameters_none(monkeypatch):
+    args = {}
+    monkeypatch.setattr('maps.parameters.request', MagicMock(args=args))
+
+    params = extract_plot_parameters()
+    for name in {'point_radius', 'point_colour', 'border_width', 'border_colour', 'resize_factor'}:
+        # check that each of the expected names is in the params dict
+        assert name in params
+
+
+def test_extract_plot_utf_grid_params_all(monkeypatch):
+    args = {
+        # use 5.2 to ensure it's converted to an int
+        'grid_resolution': 5.2,
+        # use 4.6 to ensure it's converted to an int
+        'point_width': 4.6,
+    }
+    monkeypatch.setattr('maps.parameters.request', MagicMock(args=args))
+
+    params = extract_plot_utf_grid_params()
+    assert params['grid_resolution'] == 5
+    assert params['point_width'] == 4
