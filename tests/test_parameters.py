@@ -10,7 +10,7 @@ from colour import Color
 from maps.exceptions import InvalidColour, MissingIndex
 from maps.parameters import parse_colour, extract, parse_query_body, extract_search_params, \
     extract_plot_parameters, extract_plot_utf_grid_params, extract_gridded_utf_grid_params, \
-    extract_gridded_parameters
+    extract_gridded_parameters, extract_heatmap_parameters
 
 
 def compress_query(query):
@@ -213,5 +213,36 @@ def test_extract_gridded_utf_grid_params_none(monkeypatch):
 
     params = extract_gridded_utf_grid_params()
     for name in {'grid_resolution', 'point_width'}:
+        # check that each of the expected names is in the params dict
+        assert name in params
+
+
+def test_extract_heatmap_parameters_all(monkeypatch):
+    args = {
+        # use 10.4 to ensure it's converted to an int
+        'point_radius': 10.4,
+        # use a 3 digit hex code to test that part
+        'cold_colour': '#fff',
+        # use a 6 digit hex code to test that part
+        'hot_colour': '#000000',
+        # use 1 to ensure it's converted to a float
+        'intensity': 1,
+    }
+    monkeypatch.setattr('maps.parameters.request', MagicMock(args=args))
+
+    params = extract_heatmap_parameters()
+    assert params['point_radius'] == 10
+    assert params['cold_colour'] == Color('white')
+    assert params['hot_colour'] == Color('black')
+    assert params['intensity'] == 1.0
+    assert isinstance(params['intensity'], float)
+
+
+def test_extract_heatmap_parameters_none(monkeypatch):
+    args = {}
+    monkeypatch.setattr('maps.parameters.request', MagicMock(args=args))
+
+    params = extract_heatmap_parameters()
+    for name in {'point_radius', 'cold_colour', 'hot_colour', 'intensity'}:
         # check that each of the expected names is in the params dict
         assert name in params
