@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, call
 
 from pytest import approx
 
@@ -56,3 +56,29 @@ def test_translate():
     assert Tile(0, 0, 4).translate() == (approx(85.0511), -180)
     assert Tile(1, 1, 1).translate() == (0, 0)
     assert Tile(2, 2, 2).translate() == (0, 0)
+
+
+def test_middle_and_corners():
+    tile = Tile(0, 0, 0)
+    # monkeypatch translate with a mock
+    tile.translate = MagicMock()
+
+    tile.middle()
+    # middle should be x + 0.5, y + 0.5
+    assert tile.translate.call_args == call(0.5, 0.5)
+
+    tile.top_left()
+    # top left should be x, y
+    assert tile.translate.call_args == call(0, 0)
+
+    tile.top_right()
+    # top right should be x + 1, y
+    assert tile.translate.call_args == call(1, 0)
+
+    tile.bottom_right()
+    # bottom right should be x + 1, y + 1
+    assert tile.translate.call_args == call(1, 1)
+
+    tile.bottom_left()
+    # bottom left should be x, y + 1
+    assert tile.translate.call_args == call(0, 1)
