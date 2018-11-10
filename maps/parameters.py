@@ -76,8 +76,8 @@ def extract_search_params():
     # then try the query body parameter
     query_body = extract('query', parser=parse_query_body)
     if query_body:
-        search_body = query_body['search']
-        indexes = query_body['indexes']
+        search_body = query_body.get('search', None)
+        indexes = query_body.get('indexes', None)
 
     # an index must be provided in one way or another
     if indexes is None:
