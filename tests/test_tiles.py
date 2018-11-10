@@ -83,3 +83,6 @@ def test_middle_and_corners():
     tile.bottom_left()
     # bottom left should be x, y + 1
     assert tile.translate.call_args == call(0, 1)
+
+    # a simple check that the bottom left of one tile is the top left of the next one down
+    assert Tile(1, 1, 1).bottom_left() == Tile(1, 2, 1).top_left()
