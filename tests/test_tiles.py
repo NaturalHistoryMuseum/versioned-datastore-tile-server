@@ -56,6 +56,7 @@ def test_translate():
     assert Tile(0, 0, 4).translate() == (approx(85.0511), -180)
     assert Tile(1, 1, 1).translate() == (0, 0)
     assert Tile(2, 2, 2).translate() == (0, 0)
+    assert Tile(1, 1, 1).translate(1, 1) == Tile(2, 2, 1).translate()
 
 
 def test_middle_and_corners():
