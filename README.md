@@ -61,6 +61,12 @@ Currently the available options are:
 | Name | Expected type | Description | Default |
 |------|---------------|-------------|---------|
 | `ELASTICSEARCH_HOSTS` | a list of strings | Each element in the list should be the full root HTTP(S) address of an Elasticsearch server | `['http://localhost:9200']` |
+| `ELASTICSEARCH_SNIFF_ON_START` | boolean | Corresponds to the Elasticsearch client's `sniff_on_start` parameter | `True` |
+| `ELASTICSEARCH_SNIFF_ON_CONNECTION_FAIL` | boolean | Corresponds to the Elasticsearch client's `sniff_on_connection_fail` parameter | `True` |
+| `ELASTICSEARCH_SNIFFER_TIMEOUT` | integer | Corresponds to the Elasticsearch client's `sniffer_timeout` parameter | `60` |
+| `ELASTICSEARCH_SNIFF_TIMEOUT` | integer | Corresponds to the Elasticsearch client's `sniff_timeout` parameter | `10` |
+| `ELASTICSEARCH_HTTP_COMPRESS` | boolean | Corresponds to the Elasticsearch client's `http_compress` parameter | `False` |
+| `ELASTICSEARCH_TIMEOUT` | integer | Corresponds to the Elasticsearch client's `timeout` parameter | `60` |
 
 The configuration file can be a Python file. It is read using Flask's `from_envvar` function.
 

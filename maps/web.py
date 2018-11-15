@@ -38,9 +38,14 @@ def init_elasticsearch():
     to reinstantiate the elasticsearch client because it can't handle the forking - it produces all
     kinds of weird errors during concurrent multiprocess use if you don't do this.
     """
-    app.client = Elasticsearch(hosts=app.config['ELASTICSEARCH_HOSTS'], sniff_on_start=True,
-                               sniff_on_connection_fail=True, sniffer_timeout=60, sniff_timeout=10,
-                               http_compress=False)
+    app.client = Elasticsearch(hosts=app.config['ELASTICSEARCH_HOSTS'],
+                               sniff_on_start=app.config['ELASTICSEARCH_SNIFF_ON_START'],
+                               sniff_on_connection_fail=app.config[
+                                   'ELASTICSEARCH_SNIFF_ON_CONNECTION_FAIL'],
+                               sniffer_timeout=app.config['ELASTICSEARCH_SNIFFER_TIMEOUT'],
+                               sniff_timeout=app.config['ELASTICSEARCH_SNIFF_TIMEOUT'],
+                               http_compress=app.config['ELASTICSEARCH_HTTP_COMPRESS'],
+                               timeout=app.config['ELASTICSEARCH_TIMEOUT'])
 
 
 # create an elasticsearch client for us to use
