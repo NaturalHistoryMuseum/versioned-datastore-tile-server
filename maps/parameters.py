@@ -35,7 +35,11 @@ def parse_query_body(raw_query_body):
     :param raw_query_body: the raw query body
     :return: a dict
     """
-    return json.loads(gzip.decompress(base64.urlsafe_b64decode(raw_query_body)))
+    json_string = gzip.decompress(base64.urlsafe_b64decode(raw_query_body))
+    # if the result of decompressing the data is that we get bytes, we should decode them
+    if isinstance(json_string, bytes):
+        json_string = json_string.decode('utf-8')
+    return json.loads(json_string)
 
 
 def parse_colour(value):

@@ -12,10 +12,10 @@ A tile server for use with the versioned datastore: https://github.com/NaturalHi
 Currently the best way to install is to:
  
 1. Clone the repo
-2. Inside your clone, create a python (>=3.7) virtualenv:
+2. Inside your clone, create a python (>=3.5) virtualenv:
     ```bash
     mkdir venv
-    virtualenv venv -p python3.7
+    virtualenv venv -p python3.5
     source venv/bin/activate
     ```
 3. Install the requirements into your virtualenv:

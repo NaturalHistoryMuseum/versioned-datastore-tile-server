@@ -11,7 +11,7 @@ class GridNotPowerOfTwoException(HTTPException):
     code = 400
 
     def __init__(self, grid_width):
-        super().__init__(f'Grid size ({grid_width}) must a be power of two')
+        super().__init__('Grid size ({}) must a be power of two'.format(grid_width))
 
 
 class InvalidRequestType(HTTPException):
@@ -22,7 +22,8 @@ class InvalidRequestType(HTTPException):
     code = 400
 
     def __init__(self, request_type):
-        super().__init__(f'{request_type} is not a valid request type, must be png or grid.json')
+        super().__init__('{} is not a valid request type, must be png or grid.json'.format(
+            request_type))
 
 
 class InvalidColour(HTTPException):
@@ -55,4 +56,4 @@ class InvalidStyle(HTTPException):
     code = 400
 
     def __init__(self, style):
-        super().__init__(f'{style} is not a valid style, must be plot, gridded or heatmap')
+        super().__init__('{} is not a valid style, must be plot, gridded or heatmap'.format(style))
