@@ -30,7 +30,7 @@ And that's it.
 The main Flask app is located in `maps/web.py` and should be run under [uwsgi](https://uwsgi-docs.readthedocs.io/en/latest/).
 From within the virtualenv, simply run:
 ```bash
-uwsgi uwsgi.ini
+uwsgi --ini uwsgi.ini.example
 ```
 to start the server with the default app and uwsgi settings.
 
@@ -47,7 +47,7 @@ Hence, _for test and development purposes only_ you can start the server with:
 ```bash
 python -m maps.web.py
 ```
-With the default settings, this will start a server running at `0.0.0.0:5000`.
+With the default settings, this will start a server running at `0.0.0.0:4000`.
 
 #### Running in production
 For production you should run the `uwsgi` server, probably behind `nginx`.
