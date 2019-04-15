@@ -5,3 +5,4 @@ htmlcov
 .idea
 .coverage
 *.cfg
+uwsgi.ini
