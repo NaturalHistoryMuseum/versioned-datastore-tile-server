@@ -7,6 +7,48 @@ from elasticsearch_dsl import Search
 from maps.utils import lat_lon_clamp
 
 
+class BucketResult:
+    """
+    Class representing a bucket from the elasticsearch geohash_grid aggregation.
+    """
+
+    def __init__(self, bucket):
+        """
+        :param bucket: the bucket dict
+        """
+        self.bucket = bucket
+        # this will be the geohash value of the bucket
+        self.key = bucket['key']
+        # decode the centre lat/lon coordinate for the bucket
+        self.centre_latitude, self.centre_longitude = geohash.decode(self.key)
+        # extract the number of records in this bucket
+        self.total = bucket['doc_count']
+        # extract the first record in the bucket
+        self.first_record = bucket['first']['hits']['hits'][0]['_source']
+
+    def as_geo_json_bbox(self):
+        """
+        Returns a GeoJSON polygon dict representing bounding box that surrounds this bucket.
+
+        :return: a GeoJSON polygon dict
+        """
+        bounding_box = geohash.bbox(self.key)
+        return {
+            "type": "Polygon",
+            # note the reversal of the lat/lon and the double list wrap, it's cause this is GeoJSON
+            "coordinates": [[
+                # top left corner
+                [bounding_box['w'], bounding_box['n']],
+                # top right corner
+                [bounding_box['e'], bounding_box['n']],
+                # bottom right corner
+                [bounding_box['e'], bounding_box['s']],
+                # bottom left corner
+                [bounding_box['w'], bounding_box['s']],
+            ]],
+        }
+
+
 def search(tile, indexes, search_body, points=15000):
     """
     Search the given index in elasticsearch to get the points and total records at each point
@@ -66,9 +108,6 @@ def search(tile, indexes, search_body, points=15000):
 
     # run the query and extract the buckets part of the response
     result = s.execute()
-    buckets = result.aggs.to_dict()['grid']['buckets']
-    # loop through the aggregated buckets that are returned from elasticsearch converting the
-    # geohashes into latitude/longitude pairs and storing them with the count at each point and the
-    # first hit's data
-    return [(*geohash.decode(bucket['key']), bucket['doc_count'],
-             bucket['first']['hits']['hits'][0]['_source']) for bucket in buckets]
+    # loop through the aggregated buckets that are returned from elasticsearch and create
+    # BucketResult objects for each
+    return [BucketResult(bucket) for bucket in result.aggs.to_dict()['grid']['buckets']]

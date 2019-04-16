@@ -13,17 +13,16 @@ class PlotTile(Tile):
     """
     style = 'plot'
 
-    def as_image(self, points, *args, **kwargs):
-        return self.render(points, *args, **kwargs)
+    def as_image(self, buckets, *args, **kwargs):
+        return self.render(buckets, *args, **kwargs)
 
-    def render(self, points, point_radius, point_colour, border_width, border_colour,
+    def render(self, buckets, point_radius, point_colour, border_width, border_colour,
                resize_factor):
         """
-        Renders the series of latitude and longitude points onto a tile using the point options to
-        determine the size and colour of each point.
+        Renders the series of buckets onto a tile using the point options to determine the size and
+        colour of each point.
 
-        :param points: an iterable of points to render, each element should be a tuple containing
-                       the latitude and longitude values
+        :param buckets: an iterable buckets to render, each element should be a BucketResult object
         :param point_radius: the radius of the point, this is the whole radius in pixels, including
                              the border width
         :param point_colour: the colour of the point, this should be a tuple of 3 or 4 ints
@@ -45,9 +44,10 @@ class PlotTile(Tile):
         # figure out the radius of the points we're going to render at the resize factor value
         scaled_radius = point_radius * resize_factor
 
-        for latitude, longitude, _total, _first in points:
+        for bucket in buckets:
             # translate to x and y coordinates within the tile's bounds
-            x, y = self.translate_to_tile(latitude, longitude, resize_factor)
+            x, y = self.translate_to_tile(bucket.centre_latitude, bucket.centre_longitude,
+                                          resize_factor)
             # paste the point image at the x and y coordinates. Note that we can only paste at
             # integer positions and therefore we round the values up or down. This shouldn't make
             # the points too off their exact location given that we scale the image after adding all
@@ -61,27 +61,50 @@ class PlotTile(Tile):
 
         return convert_to_png(image)
 
-    def get_marks(self, points, grid_resolution):
+    def get_marks(self, buckets, grid_resolution):
         """
         Returns a generator of coordinates to be marked in the UTFGrid produced by the as_grid
-        function. Each element yielded is a 6-tuple of latitude, longitude, x, y, total and first,
-        where latitude and longitude mark the real world points of the mark, x and y mark the cell
-        coordinates within the grid, total is the total number of records at the mark and first
-        represents the first record found at the mark.
+        function. Each element yielded is a 3-tuple of a point data dict, x, and y where the point
+        data dict is the data dict to associate with the x and y coordinate in the utf grid result,
+        and x and y are the cell coordinates within the grid.
 
-        :param points: a list of 4-tuples, each containing the latitude, longitude, total records at
-                       the coordinate and the first record at the coordinate
+        :param buckets: a list of BucketResult objects
         :param grid_resolution: the resolution of the grid, i.e. how big each cell in the grid
                                 within the tile is. For example, if set to 4 then the returned grid
                                 will be 64x64. This value must result in a grid size that is a power
                                 of 2.
-        :return: an iterable where each element is a 6-tuple of latitude, longitude, x, y, total and
-                 first
+        :return: an iterable where each element is a 3-tuple of point data, x, and y
         """
         cell_ratio = (self.width // grid_resolution) / self.width
 
-        for latitude, longitude, total, first in points:
+        for bucket in buckets:
             # translate the latitude and longitude coordinate into an x and y coordinate within the
             # tile's bounds with respect to the size of the grid
-            x, y = self.translate_to_tile(latitude, longitude, cell_ratio)
-            yield latitude, longitude, x, y, total, first
+            x, y = self.translate_to_tile(bucket.centre_latitude, bucket.centre_longitude,
+                                          cell_ratio)
+
+            point_data = {
+                'count': bucket.total,
+                'data': bucket.first_record['data'],
+            }
+
+            if bucket.total == 1:
+                # extract the actual record coordinates
+                latitude, longitude = map(float, bucket.first_record['meta']['geo'].split(','))
+                point_data.update({
+                    'record_latitude': latitude,
+                    'record_longitude': longitude,
+                })
+            else:
+                # otherwise use the group coordinates
+                point_data.update({
+                    # use the centre lat and lon of the bucket
+                    'record_latitude': bucket.centre_latitude,
+                    'record_longitude': bucket.centre_longitude,
+                    # return a filter value that if it was used as part of a further geo query
+                    # filter (i.e. __geo__) it would be understood by the versioned datastore
+                    # backend and would restrict any results to the points in this bucket
+                    'geo_filter': bucket.as_geo_json_bbox()
+                })
+
+            yield point_data, x, y
