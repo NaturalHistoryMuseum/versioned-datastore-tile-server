@@ -30,21 +30,20 @@ class Tile(metaclass=abc.ABCMeta):
         self.width = tile_size
         self.height = tile_size
 
-    def as_image(self, points, *args, **kwargs):
+    def as_image(self, buckets, *args, **kwargs):
         """
-        Renders the passed points within the tile as a png image and returns the data as an BytesIO
+        Renders the passed buckets within the tile as a png image and returns the data as an BytesIO
         object.
 
-        :param points: a list of 4-tuples, each containing the latitude, longitude, total records at
-                       the coordinate and the first record at the coordinate
+        :param buckets: a list of BucketResult objects
         :return: a BytesIO object containing a png image
         """
         pass
 
-    def as_grid(self, points, grid_resolution, point_width):
+    def as_grid(self, buckets, grid_resolution, point_width):
         """
-        Produces a dict of data about the points in this tile according to the UTFGrid specification
-        for rasterized interaction data (https://github.com/mapbox/utfgrid-spec).
+        Produces a dict of data about the buckets in this tile according to the UTFGrid
+        specification for rasterized interaction data (https://github.com/mapbox/utfgrid-spec).
 
         A brief introduction to UTFGrid: essentially, the data in the returned dict defines the
         areas in the tile which can be interacted with. It does this using an array of strings
@@ -59,8 +58,7 @@ class Tile(metaclass=abc.ABCMeta):
         For more info on the specifics of implementing the spec and an example, see here:
         https://github.com/mapbox/utfgrid-spec/blob/master/1.3/utfgrid.md.
 
-        :param points: a list of 4-tuples, each containing the latitude, longitude, total records at
-                       the coordinate and the first record at the coordinate
+        :param buckets: a list of BucketResult objects
         :param grid_resolution: the resolution of the grid, i.e. how big each cell in the grid
                                 within the tile is. For example, if set to 4 then the returned grid
                                 will be 64x64. This value must result in a grid size that is a power
@@ -87,10 +85,10 @@ class Tile(metaclass=abc.ABCMeta):
         # each point that makes it into the returned grid must have an id, this generates them
         point_id_generator = self.get_point_id_generator()
 
-        for latitude, longitude, x, y, total, first in self.get_marks(points, grid_resolution):
+        for point_data, x, y in self.get_marks(buckets, grid_resolution):
             # keep track of the grid coordinates we want to mark for this point
             to_mark = []
-            # loop through all the points in the grid to mark
+            # loop through all the points in the grid to mark for this x, y coordinate
             for x_to_mark, y_to_mark in self.get_points_to_mark(round(x), round(y), point_width):
                 # the x and y positions must be in the grid otherwise we don't mark them
                 if 0 <= x_to_mark < grid_size and 0 <= y_to_mark < grid_size:
@@ -107,33 +105,8 @@ class Tile(metaclass=abc.ABCMeta):
                 # add the point_id to the keys list
                 keys.append(point_id)
 
-                if total == 1:
-                    # extract the actual record coordinates
-                    report_latitude, report_longitude = map(float, first['meta']['geo'].split(','))
-                else:
-                    # otherwise use the group coordinates
-                    report_latitude, report_longitude = latitude, longitude
-
                 # add the data for the point
-                data[point_id] = {
-                    'count': total,
-                    'data': first['data'],
-                    'record_latitude': report_latitude,
-                    'record_longitude': report_longitude,
-                    # return a filter value that if it was used as part of a further geo query
-                    # filter (i.e. __geo__) it would be understood by the versioned datastore
-                    # backend and would restrict any results to the point(s) at this lat/long pair
-                    'geo_filter': {
-                        # we'll use a point for this as it'll be more accurate than calculating a
-                        # estimating a bounding box size and passing a Polygon
-                        "type": "Point",
-                        # note the reversal of these points cause this is GeoJSON
-                        "coordinates": [report_longitude, report_latitude],
-                        # use a tight distance to ensure we only get these points in any future
-                        # searches
-                        "distance": "1m"
-                    }
-                }
+                data[point_id] = point_data
 
         return {
             # make each row a string not a list
@@ -142,22 +115,19 @@ class Tile(metaclass=abc.ABCMeta):
             'data': data
         }
 
-    def get_marks(self, points, grid_resolution):
+    def get_marks(self, buckets, grid_resolution):
         """
-        Returns an iterable of coordinates to be marked in the UTFGrid produced by the as_grid
-        function. Each element of the iterable must be a 6-tuple of latitude, longitude, x, y, total
-        and first, where latitude and longitude mark the real world points of the mark, x and y mark
-        the cell coordinates within the grid, total is the total number of records at the mark and
-        first represents the first record found at the mark.
+        Returns a generator of coordinates to be marked in the UTFGrid produced by the as_grid
+        function. Each element yielded is a 3-tuple of a point data dict, x, and y where the point
+        data dict is the data dict to associate with the x and y coordinate in the utf grid result,
+        and x and y are the cell coordinates within the grid.
 
-        :param points: a list of 4-tuples, each containing the latitude, longitude, total records at
-                       the coordinate and the first record at the coordinate
+        :param buckets: a list of BucketResult objects
         :param grid_resolution: the resolution of the grid, i.e. how big each cell in the grid
                                 within the tile is. For example, if set to 4 then the returned grid
                                 will be 64x64. This value must result in a grid size that is a power
                                 of 2.
-        :return: an iterable where each element is a 6-tuple of latitude, longitude, x, y, total and
-                 first
+        :return: an iterable where each element is a 3-tuple of point data, x, and y
         """
         return []
 

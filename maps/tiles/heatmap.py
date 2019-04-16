@@ -11,16 +11,16 @@ from maps.utils import clamp, convert_to_png
 
 class HeatmapTile(Tile):
     """
-    The heatmap tile style renders a more overall picture by blending the points out across the tile
-    with areas where there are lots of points at the red end of the spectrum and areas where there
-    are small numbers of points at the blue end of the spectrum.
+    The heatmap tile style renders a more overall picture by blending the buckets out across the
+    tile with areas where there are lots of records at the red end of the spectrum and areas where
+    there are smaller numbers of records at the blue end of the spectrum.
     """
     style = 'heatmap'
 
-    def as_image(self, points, *args, **kwargs):
-        return self.render(points, *args, **kwargs)
+    def as_image(self, buckets, *args, **kwargs):
+        return self.render(buckets, *args, **kwargs)
 
-    def render(self, points, point_radius, cold_colour, hot_colour, intensity):
+    def render(self, buckets, point_radius, cold_colour, hot_colour, intensity):
         # create the colour range from blue through to red. This range has the same number of
         # colours in it as the allowed alpha range (i.e. 256 distinct values). This importantly
         # includes (0, 0, 0, 0) in index 0
@@ -34,12 +34,12 @@ class HeatmapTile(Tile):
                                    self.height + (point_diameter * 2)))
 
         # loop through all the point pairs
-        for latitude, longitude, total, _first in points:
+        for bucket in buckets:
             # translate to x and y coordinates within the tile's bounds
-            x, y = self.translate_to_tile(latitude, longitude, 1)
+            x, y = self.translate_to_tile(bucket.centre_latitude, bucket.centre_longitude, 1)
             # clamp the log of the total to the 1-10 range. This prevents us from giving huge totals
             # too much importance and ensures all totals are represented sensibly
-            weight = clamp(int(math.log(total)), 1, 10)
+            weight = clamp(int(math.log(bucket.total)), 1, 10)
             point = draw_heatmap_point(point_radius, weight, intensity)
             # merge it into the image at the position required. The translated the coordinates are
             # to ensure we draw the point in the right place (this is a simplified version of
