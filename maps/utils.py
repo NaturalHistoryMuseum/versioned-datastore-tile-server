@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 
 import io
+import os
+import random
+import requests
+from PIL import Image
 
 
 def clamp(value, minimum, maximum):
@@ -51,3 +55,19 @@ def convert_to_png(image):
     # buffer is next read from
     buffer.seek(0)
     return buffer
+
+
+def get_openstreetmap_tile(x, y, z):
+    """
+    Returns a pillow image object of the given tile from Open Street Map.
+
+    :param x: the tile's x coordinate
+    :param y: the tile's y coordinate
+    :param z: the tile's z coordinate
+    :return: the image object
+    """
+    url = 'https://{server}.tile.openstreetmap.org/{z}/{x}/{y}.png'
+    tile_url = url.format(server=random.choice('abc'), z=z, x=x, y=y)
+    response = requests.get(tile_url)
+    response.raise_for_status()
+    return Image.open(io.BytesIO(response.content))

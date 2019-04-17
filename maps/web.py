@@ -1,14 +1,17 @@
 #!/usr/bin/env python3
-
+import itertools
+from PIL import Image
 from elasticsearch import Elasticsearch
 from flask import Flask, send_file, request, jsonify
 
 from maps import parameters
 from maps.exceptions import InvalidRequestType, InvalidStyle
+from maps.parameters import extract, parse_bool
 from maps.query import search
 from maps.tiles.gridded import GriddedTile
 from maps.tiles.heatmap import HeatmapTile
 from maps.tiles.plot import PlotTile
+from maps.utils import convert_to_png, get_openstreetmap_tile
 
 try:
     # attempt to import the uwsgi postfork decorator. If it fails, not a problem, we're just not
@@ -93,16 +96,71 @@ def render_tile(x, y, z, request_type):
     tile = tile_styles[style](x, y, z)
 
     # query elasticsearch, this will return a list of buckets containing locations and counts
-    points = search(tile, **parameters.extract_search_params())
+    buckets = search(tile, **parameters.extract_search_params())
 
     # extract the parameters for the tile style and request type combination
     params = tile_parameters[style][request_type]()
 
     # create the appropriate response, either png or grid.json
     if request_type == 'png':
-        response = send_file(tile.as_image(points, **params), mimetype='image/png')
+        response = send_file(tile.as_image(buckets, **params), mimetype='image/png')
     else:
-        response = jsonify(tile.as_grid(points, **params))
+        response = jsonify(tile.as_grid(buckets, **params))
+
+    # ahhh cors
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    return response
+
+
+@app.route('/<int:z>/full.png')
+def render_full(z):
+    """
+    Renders a full layer. The layer rendered is given by the z parameter. All style parameters used
+    in this endpoint are the same as the ones available on the normal render_tile endpoint. There
+    is one additional parameter, "with_background" which determines whether the OSM tiles are
+    rendered too or not (default is that they are not).
+
+    This endpoint will take a bit of time to chunk through the data as the images can get reasonably
+    large, so beware if you're requesting high z-value layers.
+
+    :param z: the z value
+    :return: a png image
+    """
+    # get the requested style, default to plot if it's missing
+    style = request.args.get('style', PlotTile.style)
+    if style not in tile_styles:
+        raise InvalidStyle(style)
+
+    # extract the with background parameter
+    with_background = extract('with_background', default=False, parser=parse_bool)
+
+    # the resulting image will be a square with 2^z as the width and height
+    width = 2 ** z
+    image = Image.new('RGBA', (width * 256, width * 256))
+
+    # loop through all the tile x, y coordinate pairs
+    for x, y in itertools.product(range(width), repeat=2):
+        tile = tile_styles[style](x, y, z)
+
+        # query elasticsearch, this will return a list of buckets containing locations and counts
+        buckets = search(tile, **parameters.extract_search_params())
+
+        # extract the parameters for the tile style and request type combination
+        params = tile_parameters[style]['png']()
+
+        # add the osm background tile image if requested
+        if with_background:
+            image.paste(get_openstreetmap_tile(x, y, z), box=[x * 256, y * 256])
+
+        # tile.as_image returns the png bytes as it is primarily used for the tile rendering
+        # endpoint above, therefore we have to reread the png data before pasting it into the main
+        # layer image. Given that we don't really care about performance in this endpoint, this is
+        # fine.
+        tile_image = Image.open(tile.as_image(buckets, **params))
+        image.paste(tile_image, box=[x * 256, y * 256], mask=tile_image)
+
+    # create the response for the image
+    response = send_file(convert_to_png(image), mimetype='image/png')
 
     # ahhh cors
     response.headers['Access-Control-Allow-Origin'] = '*'
@@ -111,4 +169,4 @@ def render_tile(x, y, z, request_type):
 
 # for dev use only
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=4000)
+    app.run(host='0.0.0.0', port=5000)
