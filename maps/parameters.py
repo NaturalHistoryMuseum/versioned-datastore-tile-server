@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
-import base64
 import gzip
 import json
 
+import base64
 from colour import Color
 from flask import request
 
@@ -55,6 +55,23 @@ def parse_colour(value):
     except AttributeError as e:
         # if an error occurs, chuck our error
         raise InvalidColour(e)
+
+
+def parse_bool(value):
+    """
+    Given a string value returns a boolean. Valid true values are:
+        - true
+        - yes
+        - y
+        - t
+        - 1
+    any casing can be used to match these. If the value doesn't match one of these, False is
+    returned.
+
+    :param value: the parameter value
+    :return: True or False
+    """
+    return value.lower() in {'true', 'yes', 'y', 't', '1'}
 
 
 def extract_search_params():

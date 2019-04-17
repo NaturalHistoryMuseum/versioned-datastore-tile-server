@@ -6,3 +6,4 @@ flask==1.0.2
 uwsgi==2.0.17.1
 uwsgidecorators==1.1.0
 colour==0.1.5
+requests==2.21.0
