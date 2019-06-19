@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-import bisect
-import math
 
 from PIL import Image
 from colour import Color
