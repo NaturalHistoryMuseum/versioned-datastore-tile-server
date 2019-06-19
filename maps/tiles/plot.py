@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
+import bisect
+import math
 
 from PIL import Image
+from colour import Color
 
 from maps.tiles import Tile
 from maps.tiles.points import draw_point
@@ -13,8 +16,23 @@ class PlotTile(Tile):
     """
     style = 'plot'
 
+    def __init__(self, x, y, z):
+        super().__init__(x, y, z)
+        # create a colour range that covers every longitude
+        self.colours = list(Color('violet').range_to(Color('red'), 360))
+
     def as_image(self, buckets, *args, **kwargs):
         return self.render(buckets, *args, **kwargs)
+
+    def choose_colour(self, longitude):
+        '''
+        Choose the colour for the point based on the longitude.
+
+        :param longitude: the longitude of the point
+        :return: the colour to use
+        '''
+        # longitude ranges from -180 to 180 so add 180 and round down to get the colour
+        return self.colours[int(longitude + 180)]
 
     def render(self, buckets, point_radius, point_colour, border_width, border_colour,
                resize_factor):
@@ -38,9 +56,7 @@ class PlotTile(Tile):
         """
         # create a new image object the size of the scaled up tile
         image = Image.new('RGBA', (self.width * resize_factor, self.height * resize_factor))
-        # pre-render the point image we're going to use to render each point in the tile
-        point_image = draw_point(point_radius, point_colour.hex, border_width, border_colour.hex,
-                                 resize_factor)
+
         # figure out the radius of the points we're going to render at the resize factor value
         scaled_radius = point_radius * resize_factor
 
@@ -48,6 +64,13 @@ class PlotTile(Tile):
             # translate to x and y coordinates within the tile's bounds
             x, y = self.translate_to_tile(bucket.centre_latitude, bucket.centre_longitude,
                                           resize_factor)
+
+            # choose the colour we're going to use based on the bucket's longitude
+            point_colour = self.choose_colour(bucket.centre_longitude)
+            # render the point image we're going to use to render this point in the tile
+            point_image = draw_point(point_radius, point_colour.hex, border_width,
+                                     border_colour.hex, resize_factor)
+
             # paste the point image at the x and y coordinates. Note that we can only paste at
             # integer positions and therefore we round the values up or down. This shouldn't make
             # the points too off their exact location given that we scale the image after adding all
