@@ -73,6 +73,16 @@ tile_parameters = {
 }
 
 
+@app.route('/status')
+def status():
+    """
+    Expose a convenient endpoint to check that the server is up.
+
+    :return: just the string "OK"
+    """
+    return 'OK'
+
+
 # TODO: store/expose request/response stats somewhere for monitoring?
 @app.route('/<int:z>/<int:x>/<int:y>.<string:request_type>')
 def render_tile(x, y, z, request_type):
