@@ -1,6 +1,6 @@
 elasticsearch==6.3.1
 elasticsearch-dsl==6.3.1
-Pillow==5.3.0
+Pillow==9.0.0
 python-geohash==0.8.5
 flask==1.0.2
 uwsgi==2.0.17.1
