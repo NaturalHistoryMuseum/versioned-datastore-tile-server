@@ -57,7 +57,7 @@ class PlotTile(Tile):
 
         # if needed, resize the image and use antialiasing to smooth it out
         if resize_factor != 1:
-            image = image.resize((self.width, self.height), resample=Image.ANTIALIAS)
+            image = image.resize((self.width, self.height), resample=Image.LANCZOS)
 
         return convert_to_png(image)
 
