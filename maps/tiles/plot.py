@@ -4,7 +4,7 @@ from PIL import Image
 
 from maps.tiles import Tile
 from maps.tiles.points import draw_point
-from maps.utils import convert_to_png
+from maps.utils import convert_to_png, rebuild_data
 
 
 class PlotTile(Tile):
@@ -85,7 +85,7 @@ class PlotTile(Tile):
 
             point_data = {
                 'count': bucket.total,
-                'data': bucket.first_record['data'],
+                'data': rebuild_data(bucket.first_record['data']),
             }
 
             point_data.update({
