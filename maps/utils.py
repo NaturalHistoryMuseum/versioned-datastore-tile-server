@@ -71,3 +71,45 @@ def get_openstreetmap_tile(x, y, z):
     response = requests.get(tile_url)
     response.raise_for_status()
     return Image.open(io.BytesIO(response.content))
+
+
+def rebuild_data(parsed_data):
+    """
+    Rebuild the original data encoded by Splitgill.
+
+    :param parsed_data: the parsed dict
+    :return: the rebuilt data dict
+    """
+    # this doesn't need _ checks because you can't currently have parsed types at the
+    # root level of the data dict
+    return {key: rebuild_dict_or_list(value) for key, value in parsed_data.items()}
+
+
+def rebuild_dict_or_list(value):
+    """
+    Rebuild a dict or a list inside the parsed dict.
+
+    :param value: a dict which can either be for structure or a value, or a list of
+                  either value or structure dicts
+    :return: a dict, list, or value
+    """
+    if isinstance(value, dict):
+        if "_u" in value:
+            # this is a value dict, return the original value
+            return value["_u"]
+        else:
+            # this is a structural dict, pass each value through this function but
+            # filter out fields that start with an underscore, unless they are the
+            # special _id field
+            return {
+                key: rebuild_dict_or_list(value)
+                for key, value in value.items()
+                if not key.startswith("_") or key == "_id"
+            }
+    elif isinstance(value, list):
+        # pass each element of the list through this function
+        return [rebuild_dict_or_list(element) for element in value]
+    else:
+        # failsafe: just return the value. This should only really happen with lists
+        # containing Nones (which is technically allowed)
+        return value

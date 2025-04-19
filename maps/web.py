@@ -30,6 +30,13 @@ app.config.from_object('maps.config')
 app.config.from_envvar('maps_config', silent=True)
 
 
+@app.after_request
+def after_request(response):
+    header = response.headers
+    header["Access-Control-Allow-Origin"] = "*"
+    return response
+
+
 @postfork
 def init_elasticsearch():
     """
@@ -117,8 +124,6 @@ def render_tile(x, y, z, request_type):
     else:
         response = jsonify(tile.as_grid(buckets, **params))
 
-    # ahhh cors
-    response.headers['Access-Control-Allow-Origin'] = '*'
     return response
 
 
@@ -172,8 +177,6 @@ def render_full(z):
     # create the response for the image
     response = send_file(convert_to_png(image), mimetype='image/png')
 
-    # ahhh cors
-    response.headers['Access-Control-Allow-Origin'] = '*'
     return response
 
 

@@ -63,14 +63,15 @@ class GriddedTile(Tile):
         for y in range(grid_size):
             row = []
             for x in range(grid_size):
-                row.append([0, None])
+                row.append([0, None, None, None])
             grid.append(row)
 
         # assign each bucket a cell in the grid and add its count to the total
         for bucket in buckets:
             # translate to x and y coordinates within the tile's bounds on the grid's scale
-            x, y = self.translate_to_tile(bucket.centre_latitude, bucket.centre_longitude,
-                                          cell_ratio)
+            x, y = self.translate_to_tile(
+                bucket.centre_latitude, bucket.centre_longitude, cell_ratio
+            )
 
             # ignore out of bounds points
             if x < 0 or x >= grid_size or y < 0 or y >= grid_size:
@@ -86,12 +87,24 @@ class GriddedTile(Tile):
             if grid[y][x][1] is None:
                 grid[y][x][1] = bucket.first_record
 
+            if grid[y][x][2] is None:
+                grid[y][x][2] = bucket.centre_latitude
+                grid[y][x][3] = bucket.centre_longitude
+
         return grid
 
     def as_image(self, buckets, *args, **kwargs):
         return self.render(buckets, *args, **kwargs)
 
-    def render(self, buckets, grid_resolution, cold_colour, hot_colour, range_size, resize_factor):
+    def render(
+        self,
+        buckets,
+        grid_resolution,
+        cold_colour,
+        hot_colour,
+        range_size,
+        resize_factor,
+    ):
         """
         Renders the series of buckets onto a grid, weighing the colour of the bucket in each cell of
         the grid using the total count of records in it.
@@ -115,7 +128,7 @@ class GriddedTile(Tile):
         image = Image.new('RGBA', (self.width * resize_factor, self.height * resize_factor))
 
         for y, row in enumerate(self.group_buckets(buckets, grid_resolution)):
-            for x, (count, _first) in enumerate(row):
+            for x, (count, _first, _lat, _lon) in enumerate(row):
                 colour = self.assign_colour(count, cold_colour, hot_colour, range_size)
                 if colour is None:
                     continue
@@ -145,19 +158,14 @@ class GriddedTile(Tile):
         :return: an iterable where each element is a 3-tuple of point data, x, and y
         """
         for y, row in enumerate(self.group_buckets(buckets, grid_resolution)):
-            for x, (total, first) in enumerate(row):
+            for x, (total, first, lat, lon) in enumerate(row):
                 if total == 0:
                     continue
-                # use the lat/long from the first record in this group. It would be nicer to use the
-                # centre of the cell but it's probably not worth the time it would take to calculate
-                # this
-                latitude, longitude = map(float, first['meta']['geo'].split(','))
-
                 point_data = {
-                    'count': total,
-                    'data': first['data'],
-                    'record_latitude': latitude,
-                    'record_longitude': longitude,
+                    "count": total,
+                    "data": first["data"],
+                    "record_latitude": lat,
+                    "record_longitude": lon,
                 }
 
                 yield point_data, x, y
