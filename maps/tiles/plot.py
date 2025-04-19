@@ -4,7 +4,7 @@ from PIL import Image
 
 from maps.tiles import Tile
 from maps.tiles.points import draw_point
-from maps.utils import convert_to_png
+from maps.utils import convert_to_png, rebuild_data
 
 
 class PlotTile(Tile):
@@ -85,26 +85,18 @@ class PlotTile(Tile):
 
             point_data = {
                 'count': bucket.total,
-                'data': bucket.first_record['data'],
+                'data': rebuild_data(bucket.first_record['data']),
             }
 
-            if bucket.total == 1:
-                # extract the actual record coordinates
-                latitude, longitude = map(float, bucket.first_record['meta']['geo'].split(','))
-                point_data.update({
-                    'record_latitude': latitude,
-                    'record_longitude': longitude,
-                })
-            else:
-                # otherwise use the group coordinates
-                point_data.update({
-                    # use the centre lat and lon of the bucket
-                    'record_latitude': bucket.centre_latitude,
-                    'record_longitude': bucket.centre_longitude,
-                    # return a filter value that if it was used as part of a further geo query
-                    # filter (i.e. __geo__) it would be understood by the versioned datastore
-                    # backend and would restrict any results to the points in this bucket
-                    'geo_filter': bucket.as_geo_json_bbox()
-                })
+            point_data.update({
+                # use the centre lat and lon of the bucket
+                'record_latitude': bucket.centre_latitude,
+                'record_longitude': bucket.centre_longitude,
+                # return a filter value that if it was used as part of a further geo
+                # query filter (i.e. __geo__) it would be understood by the versioned
+                # datastore backend and would restrict any results to the points in this
+                # bucket
+                'geo_filter': bucket.as_geo_json_bbox()
+            })
 
             yield point_data, x, y

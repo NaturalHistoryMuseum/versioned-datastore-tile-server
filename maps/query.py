@@ -89,7 +89,7 @@ def search(tile, indexes, search_body, points=15000):
     s = s.index(indexes).using(flask.current_app.client)[0:0]
     # create the geo_bounding_box query, which will filter the data by the tile's bounding box
     bounding_box = {
-        'meta.geo': {
+        'all_points': {
             # include a small bit of extra wiggle room to ensure we render dots on the edge of tiles
             # correctly (i.e. the actual point should appear in both tiles even when the point
             # itself only reside in one)
@@ -103,7 +103,7 @@ def search(tile, indexes, search_body, points=15000):
     precision = tile.calculate_precision()
     # add the geohash_grid aggregation and the aggregation which will find the first hit
     s.aggs \
-        .bucket('grid', 'geohash_grid', field='meta.geo', precision=precision, size=points) \
+        .bucket('grid', 'geohash_grid', field='all_points', precision=precision, size=points) \
         .bucket('first', 'top_hits', size=1)
 
     # run the query and extract the buckets part of the response
